@@ -1,0 +1,196 @@
+zabbix_export:
+  version: '6.0'
+  date: '2023-02-02T10:02:36Z'
+  media_types:
+    -
+      name: cstate
+      type: WEBHOOK
+      parameters:
+        -
+          name: cstatesubsystems
+          value: '{SERVICE.TAGS.cstate_subsystems}'
+        -
+          name: cstatesystem
+          value: '{SERVICE.TAGS.cstate_system}'
+        -
+          name: EventDate
+          value: '{EVENT.DATE}'
+        -
+          name: EventId
+          value: '{EVENT.ID}'
+        -
+          name: EventName
+          value: '{EVENT.NAME}'
+        -
+          name: EventSeverity
+          value: '{EVENT.SEVERITY}'
+        -
+          name: EventStatus
+          value: '{EVENT.STATUS}'
+        -
+          name: EventTime
+          value: '{EVENT.TIME}'
+        -
+          name: EventUpdateStatus
+          value: '{EVENT.UPDATE.STATUS}'
+        -
+          name: Message
+          value: '{ALERT.MESSAGE}'
+        -
+          name: ServiceDescription
+          value: '{SERVICE.DESCRIPTION}'
+        -
+          name: ServiceTags
+          value: '{SERVICE.TAGS}'
+        -
+          name: Subject
+          value: '{ALERT.SUBJECT}'
+      script: |
+        var cstate = {
+            message: null,
+            proxy: null,
+
+            sendMessage: function() {
+                var params = {
+                    //text: cstate.message,
+                    name: cstate.name,
+                    time: cstate.time,
+                    date: cstate.date,
+                    updatestatus: cstate.updatestatus,
+                    status: cstate.eventstatus,
+                    id: cstate.eventid,
+                    servicedescription: cstate.servicedescription,
+                    servicetags: cstate.servicetags,
+                    system: cstate.system,
+                    subsystems: cstate.subsystems,
+                    severity: cstate.severity
+                },
+                data,
+                response,
+                request = new CurlHttpRequest(),
+                url = 'http://127.0.0.1:8090/call';
+
+                if (cstate.proxy) {
+                    request.SetProxy(cstate.proxy);
+                }
+
+                request.AddHeader('Content-Type: application/json');
+                data = JSON.stringify(params);
+
+                Zabbix.Log(4, '[cstate Webhook] params: ' + data);
+                response = request.Post(url, data);
+                Zabbix.Log(4, '[cstate Webhook] HTTP code: ' + request.Status());
+
+                try {
+                    response = JSON.parse(response);
+                }
+                catch (error) {
+                    response = null;
+                }
+
+                if (request.Status() !== 200) {
+                    if (typeof response.description === 'string') {
+                        throw response.description;
+                    }
+                    else {
+                        throw 'Unknown error. Check debug log for more information.'
+                    }
+                }
+            }
+        }
+
+        try {
+            var params = JSON.parse(value);
+
+            if (params.HTTPProxy) {
+                cstate.proxy = params.HTTPProxy;
+            }
+
+            cstate.message = params.Subject + '\n' + params.Message;
+            cstate.name = params.EventName;
+            cstate.time = params.EventTime;
+            cstate.date = params.EventDate;
+            cstate.severity = params.EventSeverity;
+            cstate.updatestatus = params.EventUpdateStatus;
+            cstate.eventstatus = params.EventStatus;
+            cstate.eventid = params.EventId;
+            cstate.servicedescription = params.ServiceDescription;
+            cstate.servicetags = params.ServiceTags;
+            cstate.system = params.cstatesystem;
+            cstate.subsystems = params.cstatesubsystems;
+            cstate.sendMessage();
+
+            return 'OK';
+        }
+        catch (error) {
+            Zabbix.Log(4, '[cstate Webhook] notification failed: ' + error);
+            throw 'Sending failed: ' + error + '.';
+        }
+      message_templates:
+        -
+          event_source: TRIGGERS
+          operation_mode: PROBLEM
+          subject: 'Problem: {EVENT.NAME}'
+          message: |
+            Problem started at {EVENT.TIME} on {EVENT.DATE}
+            Problem name: {EVENT.NAME}
+            Host: {HOST.NAME}
+            Severity: {EVENT.SEVERITY}
+            Operational data: {EVENT.OPDATA}
+            Original problem ID: {EVENT.ID}
+            {TRIGGER.URL}
+        -
+          event_source: TRIGGERS
+          operation_mode: RECOVERY
+          subject: 'Resolved in {EVENT.DURATION}: {EVENT.NAME}'
+          message: |
+            Problem has been resolved at {EVENT.RECOVERY.TIME} on {EVENT.RECOVERY.DATE}
+            Problem name: {EVENT.NAME}
+            Problem duration: {EVENT.DURATION}
+            Host: {HOST.NAME}
+            Severity: {EVENT.SEVERITY}
+            Original problem ID: {EVENT.ID}
+            {TRIGGER.URL}
+        -
+          event_source: TRIGGERS
+          operation_mode: UPDATE
+          subject: 'Updated problem in {EVENT.AGE}: {EVENT.NAME}'
+          message: |
+            {USER.FULLNAME} {EVENT.UPDATE.ACTION} problem at {EVENT.UPDATE.DATE} {EVENT.UPDATE.TIME}.
+            {EVENT.UPDATE.MESSAGE}
+
+            Current problem status is {EVENT.STATUS}, age is {EVENT.AGE}, acknowledged: {EVENT.ACK.STATUS}.
+        -
+          event_source: SERVICE
+          operation_mode: PROBLEM
+          subject: 'Service "{SERVICE.NAME}" problem: {EVENT.NAME}'
+          message: |
+            Service problem started at {EVENT.TIME} on {EVENT.DATE}
+            Service problem name: {EVENT.NAME}
+            Service: {SERVICE.NAME}
+            Severity: {EVENT.SEVERITY}
+            Original problem ID: {EVENT.ID}
+            Service description: {SERVICE.DESCRIPTION}
+
+            {SERVICE.ROOTCAUSE}
+        -
+          event_source: SERVICE
+          operation_mode: RECOVERY
+          subject: 'Service "{SERVICE.NAME}" resolved in {EVENT.DURATION}: {EVENT.NAME}'
+          message: |
+            Service "{SERVICE.NAME}" has been resolved at {EVENT.RECOVERY.TIME} on {EVENT.RECOVERY.DATE}
+            Problem name: {EVENT.NAME}
+            Problem duration: {EVENT.DURATION}
+            Severity: {EVENT.SEVERITY}
+            Original problem ID: {EVENT.ID}
+            Service description: {SERVICE.DESCRIPTION}
+        -
+          event_source: SERVICE
+          operation_mode: UPDATE
+          subject: 'Changed "{SERVICE.NAME}" service status to {EVENT.UPDATE.SEVERITY} in {EVENT.AGE}'
+          message: |
+            Changed "{SERVICE.NAME}" service status to {EVENT.UPDATE.SEVERITY} at {EVENT.UPDATE.DATE} {EVENT.UPDATE.TIME}.
+            Current problem age is {EVENT.AGE}.
+            Service description: {SERVICE.DESCRIPTION}
+
+            {SERVICE.ROOTCAUSE}
