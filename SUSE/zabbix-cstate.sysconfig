@@ -1,0 +1,18 @@
+# This file is shipped as part of the zabbix-cstate package.
+# Author: Georg Pfuetzenreuter <georg.pfuetzenreuter@suse.com>
+
+# IP address for the server to bind on
+# Default: ::1
+# ZC_HOST=
+
+# Port to listen on
+# Default: 8090
+# ZC_PORT=
+
+# Log level
+# Default: Warning
+# ZC_LOGLEVEL=
+
+# Directory to manage issue content files in
+# No default, needs to be set
+# ZC_ISSUES=

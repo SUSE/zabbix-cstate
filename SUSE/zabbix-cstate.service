@@ -1,0 +1,25 @@
+# This file is shipped as part of the zabbix-cstate package.
+# Author: Georg Pfuetzenreuter <georg.pfuetzenreuter@suse.com>
+
+[Unit]
+Description=Zabbix Cstate Synchronization Server
+
+[Service]
+User=_zabbixcstate
+Group=_zabbixcstate
+EnvironmentFile=/etc/sysconfig/zabbix-cstate
+ExecStart=/usr/bin/zabbix-cstate
+ProtectSystem=strict
+ProtectHome=yes
+PrivateDevices=yes
+PrivateTmp=yes
+PrivateUsers=yes
+ProtectKernelTunables=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET6 AF_INET
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+
+[Install]
+WantedBy=multi-user.target
