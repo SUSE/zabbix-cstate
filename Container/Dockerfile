@@ -7,7 +7,7 @@
 # An English copy of the Licence is shipped in a file called LICENSE along with this applications source code.
 # You may obtain copies of the Licence in any of the official languages at https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12.
 
-FROM suse/sle15:15.4
+FROM suse/sle15:15.5
 
 MAINTAINER georg.pfuetzenreuter@suse.com
 
